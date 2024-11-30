@@ -10,6 +10,14 @@ def load_config():
         return json.load(f)
 
 def get_git_changes():
+
+    """Stage all changes (equivalent to 'git add -A')"""
+    try:
+        subprocess.run(["git", "add", "--all"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error staging changes: {e.stderr.strip()}")
+        exit(1)
+
     """Get a summary of changes added to the staging area."""
     try:
         result = subprocess.run(
@@ -44,30 +52,40 @@ def generate_commit_message(changes_summary):
 
 def create_commit(dry_run=False):
     """Create a Git commit with a generated message."""
-
     changes_summary = get_git_changes()
     if not changes_summary:
         print("No changes staged for commit.")
         exit(0)
 
-    print ("\nGit changes:\n")
-    print (changes_summary)
-    print ("\n")
+    # print ("\nGit changes:\n")
+    # print (changes_summary)
+    # print ("\n")
+
 
     commit_message = generate_commit_message(changes_summary)
     print("\nGenerated Commit Message:\n")
     print(commit_message)
     print("\n")
 
-    if not dry_run:
-        try:
-            subprocess.run(
-                ["git", "commit", "-m", commit_message],
-                check=True
-            )
-        except subprocess.CalledProcessError as e:
-            print(f"Error: {e.stderr.strip()}")
-            exit(1)
+
+    if dry_run:
+        print("Dry run mode: not committing.")
+        return
+
+    # Prompt the user for confirmation
+    confirm = input("Commit this message? (y/N): ").strip().lower()
+    if confirm != "y":
+        print("Commit canceled.")
+        return
+
+    try:
+        subprocess.run(
+            ["git", "commit", "-m", commit_message],
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e.stderr.strip()}")
+        exit(1)
 
 def main():
     """Main entry point."""
